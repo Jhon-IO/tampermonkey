@@ -1,0 +1,113 @@
+// ==UserScript==
+// @name         WhatsApp Web Modular Blocker (Categorized)
+// @namespace    http://tampermonkey.net/
+// @version      1.2
+// @description  Framework modular e categorizado para bloqueio de elementos.
+// @author       Gemini
+// @match        https://web.whatsapp.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    /**
+     * @typedef {Object} BlockerConfig
+     * @property {string[]} classes - Seletores focados em classes CSS.
+     * @property {string[]} ids - Seletores focados em IDs únicos.
+     * @property {string[]} tags - Seletores focados em tags HTML genéricas.
+     * @property {string[]} attributes - Seletores focados em atributos (data-*, role, etc) frequentemente usados pelo JS/React.
+     * @property {string[]} complex - Seletores combinados ou com pseudo-classes (:has, :not).
+     */
+    const config = {
+        classes: [
+            // Instrução: Insira classes CSS precedidas por ponto. Útil para elementos estéticos.
+            // '.banner-propaganda',
+            // '.modal-upsell'
+               '.ant-card-body',
+               '.kaption-chat-panel-surface'
+        ],
+        ids: [
+            // Instrução: Insira IDs únicos precedidos por hashtag. Útil para contêineres absolutos.
+            // '#popup-boas-vindas',
+            // '#anuncio-overlay'
+        ],
+        tags: [
+            // Instrução: Insira tags HTML cruas. (Cuidado: usar tags puras pode quebrar o layout, seja específico).
+            // 'dialog',
+            // 'aside'
+        ],
+        attributes: [
+            // Instrução: Insira atributos entre colchetes. Ideal para capturar elementos gerados por frameworks JS (React/Vue).
+            // '[data-testid="ad-container"]',
+            // '[aria-label="Anúncio"]'
+        ],
+        complex: [
+            // Instrução: Combinações avançadas de seletores para extrema precisão sem afetar elementos irmãos.
+            'div[role="dialog"][data-slot="glass-dialog-content"]:has(.onboarding-step-enter)'
+        ]
+    };
+
+    const ModularBlocker = ((cfg) => {
+        /**
+         * Extrai e concatena todos os seletores válidos do objeto de configuração.
+         * @returns {string[]} Lista plana de seletores CSS ativos.
+         */
+        const getActiveSelectors = () => {
+            return Object.values(cfg)
+                .flat()
+                .filter(selector => typeof selector === 'string' && selector.trim() !== '' && !selector.startsWith('//'));
+        };
+
+        const activeSelectors = getActiveSelectors();
+
+        // Guard Clause: Se não houver configurações ativas, aborta a execução silenciosamente.
+        if (activeSelectors.length === 0) return { init: () => {} };
+
+        /**
+         * Executa a varredura e remoção dos elementos mapeados na configuração.
+         * Operação idempotente.
+         */
+        const purgeElements = () => {
+            activeSelectors.forEach(selector => {
+                try {
+                    const nodes = document.querySelectorAll(selector);
+                    if (!nodes.length) return;
+
+                    nodes.forEach(node => {
+                        node.remove();
+                        console.info(`[ModularBlocker] Removido alvo: ${selector}`);
+                    });
+                } catch (error) {
+                    console.error(`[ModularBlocker] Falha de sintaxe no seletor "${selector}":`, error);
+                }
+            });
+        };
+
+        /**
+         * Inicializa o MutationObserver focado em adições ao DOM.
+         */
+        const initObserver = () => {
+            const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    if (mutation.addedNodes.length > 0) {
+                        purgeElements();
+                        return; // Quebra o loop para evitar varreduras redundantes no mesmo lote de mutações
+                    }
+                }
+            });
+
+            // Configurado para monitorar a árvore inteira do documento.
+            observer.observe(document.body, { childList: true, subtree: true });
+        };
+
+        return {
+            init: () => {
+                purgeElements();
+                initObserver();
+            }
+        };
+    })(config);
+
+    ModularBlocker.init();
+})();

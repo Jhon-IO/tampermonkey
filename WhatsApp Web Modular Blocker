@@ -2,8 +2,7 @@
 // @name         WhatsApp Web Modular Blocker (Categorized)
 // @namespace    http://tampermonkey.net/
 // @version      1.2
-// @description  Framework modular e categorizado para bloqueio de elementos.
-// @author       Gemini
+// @description  Framework modular e categorizado para bloqueio de elementos invasivos.
 // @match        https://web.whatsapp.com/*
 // @grant        none
 // ==/UserScript==
